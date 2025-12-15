@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>세련된 버블 슈터</title>
+    <title>자동 조준 버블 슈터</title>
     <style>
         /* 기본 스타일 */
         body {
@@ -12,7 +12,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #1f4287, #21e4c7); /* 배경 그라데이션 */
+            background: linear-gradient(135deg, #1f4287, #21e4c7); 
             flex-direction: column;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none; 
@@ -20,7 +20,7 @@
         }
 
         #game-wrapper {
-            background-color: #0d2c55; /* 어두운 게임 배경 */
+            background-color: #0d2c55; 
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 255, 255, 0.1);
             padding: 15px;
@@ -28,22 +28,19 @@
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 420px; /* 화면 최대 크기 제한 */
+            max-width: 420px; 
         }
 
-        /* 1. 화면 크기 조정: 캔버스 크기를 줄이고, Wrapper로 전체를 감싸 자연스럽게 중앙 배치 */
         canvas {
             border: 4px solid #4a90e2; 
-            background-color: #1a4e7e; /* 캔버스 배경색 조정 */
+            background-color: #1a4e7e; 
             cursor: pointer;
             border-radius: 8px;
-            /* 캔버스 크기 축소 */
             width: 380px; 
             height: 570px; 
             margin-bottom: 15px;
         }
         
-        /* 2. 세련된 화면 구성: 정보 패널 스타일링 */
         #info {
             color: #ffffff;
             margin-bottom: 10px;
@@ -64,14 +61,41 @@
             text-shadow: 1px 1px 2px #000;
         }
 
-        /* 3. 거북이 발사대 스타일링 (CSS만으로는 이미지를 대체하기 어려우므로 텍스트로 대체) */
         #shooter {
             position: absolute;
             z-index: 10;
-            color: #38c172; /* 거북이 색상 */
+            color: #38c172; 
             font-size: 3em;
             text-shadow: 1px 1px 3px #000;
-            pointer-events: none; /* 클릭 이벤트가 캔버스로 전달되도록 설정 */
+            pointer-events: none;
+        }
+
+        /* 2. 모바일 발사 버튼 스타일 */
+        #mobile-controls {
+            width: 90%;
+            max-width: 380px;
+            display: flex;
+            justify-content: center;
+            margin-top: 5px;
+        }
+
+        #shoot-button {
+            padding: 15px 30px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: white;
+            background-color: #e91e63; /* 강렬한 발사 버튼 색상 */
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px #ad1457;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+        }
+
+        #shoot-button:active {
+            box-shadow: 0 2px #ad1457;
+            transform: translateY(2px);
         }
     </style>
 </head>
@@ -79,12 +103,16 @@
     <div id="game-wrapper">
         <div id="info">
             점수: <span id="score">0</span> | 남은 행: <span id="remainingRows"></span>
-            <div id="message">버블 슈터 시작!</div>
+            <div id="message"></div>
         </div>
         
         <canvas id="gameCanvas" width="400" height="600"></canvas>
         
         <div id="shooter">🐢</div> 
+
+        <div id="mobile-controls">
+            <button id="shoot-button">발사!</button>
+        </div>
     </div>
 
     <script>
@@ -94,21 +122,26 @@
         const scoreDisplay = document.getElementById('score');
         const remainingRowsDisplay = document.getElementById('remainingRows');
         const messageDisplay = document.getElementById('message');
-        const shooterElement = document.getElementById('shooter'); // 거북이 DOM 요소
+        const shooterElement = document.getElementById('shooter');
+        const shootButton = document.getElementById('shoot-button'); // 발사 버튼 DOM
 
         // ====== 상수 및 설정 ======
-        const CANVAS_WIDTH = 400; // HTML에서 설정한 너비와 동일하게 유지
-        const CANVAS_HEIGHT = 600; // HTML에서 설정한 높이와 동일하게 유지
+        const CANVAS_WIDTH = 400; 
+        const CANVAS_HEIGHT = 600; 
         const BUBBLE_RADIUS = 20; 
-        const BUBBLE_COLORS = ['#ff4c4c', '#4caf50', '#2196f3', '#ffeb3b', '#9c27b0']; // 세련된 색상
+        const BUBBLE_COLORS = ['#ff4c4c', '#4caf50', '#2196f3', '#ffeb3b', '#9c27b0'];
         const SHOOTER_Y = CANVAS_HEIGHT - BUBBLE_RADIUS * 2;
         const GRID_ROWS = 15; 
         const GRID_COLS = 10; 
         const ROW_HEIGHT = Math.sqrt(3) * BUBBLE_RADIUS; 
         
-        // 1. 화살표 방향 조절을 위한 변수
-        let aimAngle = Math.PI / 2; // 초기 각도 (90도, 위쪽)
-        const AIM_SPEED = 0.05; // 방향 조정 속도
+        // 1. 자동 조준을 위한 변수
+        let aimAngle = Math.PI / 2;     // 현재 각도 (90도)
+        let angleDirection = 1;         // 1: 오른쪽으로, -1: 왼쪽으로
+        const AIM_SPEED = 0.03;         // 자동 왕복 속도
+
+        const MIN_ANGLE = Math.PI / 8;  // 최소 각도 (약 22.5도)
+        const MAX_ANGLE = Math.PI * 7 / 8; // 최대 각도 (약 157.5도)
 
         // ====== 전역 변수 ======
         let score = 0;
@@ -117,9 +150,7 @@
         let firedBubble = null;
         let bubbleGrid = [];
         let gameLoop;
-        let aimLeft = false; // 방향키 상태
-        let aimRight = false;
-        let isShooting = false; // 발사 중 상태
+        let isShooting = false; 
 
         // ====== 클래스 정의: Bubble (이전과 동일) ======
         class Bubble {
@@ -139,12 +170,9 @@
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
                 ctx.fill();
-                
-                // 블록에 하이라이트 추가하여 세련되게 보이게 함
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                 ctx.lineWidth = 1;
                 ctx.stroke();
-
                 ctx.closePath();
             }
 
@@ -156,7 +184,7 @@
             }
         }
         
-        // ====== 게임 초기화 및 그리드 설정 (이전과 동일) ======
+        // ====== 게임 초기화 및 시작 ======
         
         function getRandomColor(availableColors) {
             return availableColors[Math.floor(Math.random() * availableColors.length)];
@@ -201,23 +229,21 @@
             score = 0;
             isGameOver = false;
             firedBubble = null;
-            messageDisplay.textContent = "방향키(←, →)로 조준 후 스페이스바(모바일 터치)로 발사하세요!";
+            messageDisplay.textContent = "방향 화살표가 자동으로 움직입니다. 발사 버튼이나 스페이스바를 누르세요!";
 
             initGrid();
             currentBubble = getRandomBubble();
             scoreDisplay.textContent = score;
             
-            // 3. 거북이 발사대 위치 설정
             updateShooterPosition();
             
             requestAnimationFrame(draw);
         }
         
-        // 3. 거북이 발사대 위치 업데이트
         function updateShooterPosition() {
-            // 거북이를 캔버스 중앙 하단에 배치
-            shooterElement.style.left = canvas.offsetLeft + CANVAS_WIDTH / 2 - shooterElement.offsetWidth / 2 + 'px';
-            shooterElement.style.top = canvas.offsetTop + SHOOTER_Y - 40 + 'px'; // 거북이 크기 고려하여 조정
+            const rect = canvas.getBoundingClientRect();
+            shooterElement.style.left = rect.left + CANVAS_WIDTH / 2 - shooterElement.offsetWidth / 2 + 'px';
+            shooterElement.style.top = rect.top + SHOOTER_Y - 40 + 'px';
         }
         
         // ====== 발사 로직 ======
@@ -225,10 +251,9 @@
         function shootBubble() {
             if (isGameOver || firedBubble) return;
 
-            // 1. 각도를 속도로 변환 (직접 각도 사용)
             const speed = 8;
             currentBubble.vx = speed * Math.cos(aimAngle);
-            currentBubble.vy = -speed * Math.sin(aimAngle); // Canvas Y축은 아래로 증가하므로 마이너스
+            currentBubble.vy = -speed * Math.sin(aimAngle);
 
             currentBubble.isFired = true;
             firedBubble = currentBubble;
@@ -237,44 +262,51 @@
             isShooting = true;
         }
 
-        // ====== 1. 방향 화살표 그리기 로직 ======
+        // ====== 1. 자동 왕복 조준 로직 ======
+
+        function updateAimAngle() {
+            // 각도 변경
+            aimAngle += angleDirection * AIM_SPEED;
+
+            // 경계 조건 확인 및 방향 전환
+            if (aimAngle > MAX_ANGLE) {
+                aimAngle = MAX_ANGLE;
+                angleDirection = -1; // 왼쪽으로 전환
+            } else if (aimAngle < MIN_ANGLE) {
+                aimAngle = MIN_ANGLE;
+                angleDirection = 1; // 오른쪽으로 전환
+            }
+        }
 
         function drawAimLine() {
             if (firedBubble) return;
 
-            // 화살표 길이
             const length = 100; 
-            
-            // 목표 지점 계산
             const targetX = currentBubble.x + length * Math.cos(aimAngle);
             const targetY = currentBubble.y - length * Math.sin(aimAngle); 
             
             // 화살표 스타일
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]); // 점선
+            ctx.setLineDash([5, 5]); 
 
             ctx.beginPath();
             ctx.moveTo(currentBubble.x, currentBubble.y);
             ctx.lineTo(targetX, targetY);
             ctx.stroke();
-            ctx.setLineDash([]); // 점선 해제
+            ctx.setLineDash([]); 
         }
         
-        // ====== 게임 로직 (충돌, 고정, 제거, 그리기 등은 이전 코드와 동일) ======
-
+        // ====== 게임 로직 (충돌, 고정, 제거 등은 이전 코드와 동일) ======
+        
         function checkGridCollision(bubble) {
-            if (bubble.y - BUBBLE_RADIUS <= 0) {
-                return true;
-            }
+            if (bubble.y - BUBBLE_RADIUS <= 0) return true;
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < bubbleGrid[r].length; c++) {
                     const target = bubbleGrid[r][c];
                     if (target) {
                         const distance = Math.sqrt((bubble.x - target.x) ** 2 + (bubble.y - target.y) ** 2);
-                        if (distance < BUBBLE_RADIUS * 2) {
-                            return true;
-                        }
+                        if (distance < BUBBLE_RADIUS * 2) return true;
                     }
                 }
             }
@@ -309,7 +341,6 @@
         }
 
         function findNeighbors(r, c) {
-            // ... (이웃 찾는 로직은 생략. 원본 코드를 그대로 사용)
             const isOddRow = r % 2 !== 0; 
             const offsets = isOddRow ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]] : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
             const neighbors = [];
@@ -333,17 +364,13 @@
             while (queue.length > 0) {
                 const { r, c } = queue.shift();
                 const key = `${r},${c}`;
-
                 if (visited.has(key)) continue;
                 visited.add(key);
-
                 const bubble = bubbleGrid[r][c];
                 if (bubble && bubble.color === targetColor) {
                     connected.push({ r, c });
-
                     findNeighbors(r, c).forEach(neighbor => {
-                        if (!visited.has(`${neighbor.r},${neighbor.c}`) && 
-                            neighbor.bubble.color === targetColor) {
+                        if (!visited.has(`${neighbor.r},${neighbor.c}`) && neighbor.bubble.color === targetColor) {
                             queue.push({ r: neighbor.r, c: neighbor.c });
                         }
                     });
@@ -367,7 +394,6 @@
         }
 
         function clearFloatingBubbles() {
-            // ... (고아 버블 제거 로직은 생략. 원본 코드를 그대로 사용)
             const connectedToTop = new Set();
             for (let c = 0; c < bubbleGrid[0].length; c++) {
                 if (bubbleGrid[0][c]) {
@@ -404,6 +430,8 @@
             if (floatersRemoved > 0) {
                 score += floatersRemoved * 50; 
                 messageDisplay.textContent = `콤보! ${floatersRemoved}개의 버블이 떨어졌습니다.`;
+            } else {
+                messageDisplay.textContent = "";
             }
         }
 
@@ -411,7 +439,7 @@
             const maxR = Math.floor(SHOOTER_Y / ROW_HEIGHT);
             if (bubbleGrid.some((row, r) => r > maxR && row.some(b => b !== null))) {
                 isGameOver = true;
-                messageDisplay.textContent = "게임 오버! 다시 시작하려면 클릭/터치하세요.";
+                messageDisplay.textContent = "게임 오버! 다시 시작하려면 버튼을 누르세요.";
             } else if (bubbleGrid.every(row => row.every(b => b === null))) {
                 isGameOver = true;
                 messageDisplay.textContent = "★ 승리! 축하합니다! ★";
@@ -421,12 +449,10 @@
         function handleFiredBubbleCollision() {
             if (!firedBubble) return;
 
-            // 좌우 벽 충돌 처리
             if (firedBubble.x - BUBBLE_RADIUS < 0 || firedBubble.x + BUBBLE_RADIUS > CANVAS_WIDTH) {
                 firedBubble.vx *= -1;
             }
 
-            // 천장/그리드 버블 충돌 처리
             if (firedBubble.y - BUBBLE_RADIUS <= 0 || checkGridCollision(firedBubble)) {
                 snapBubbleToGrid(firedBubble);
             }
@@ -448,35 +474,21 @@
             remainingRowsDisplay.textContent = activeRows;
         }
 
-        // 1. 방향 조정 로직
-        function updateAimAngle() {
-            if (aimLeft) {
-                aimAngle += AIM_SPEED;
-            } else if (aimRight) {
-                aimAngle -= AIM_SPEED;
-            }
-
-            // 각도 제한 (0도 ~ 180도)
-            if (aimAngle > Math.PI) aimAngle = Math.PI;
-            if (aimAngle < 0) aimAngle = 0;
-        }
-
-
         // ====== 게임 루프 ======
 
         function draw() {
             ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             
             if (isGameOver) {
+                // 게임 오버 상태에서는 조준선 움직임 중지
+                gameLoop = requestAnimationFrame(draw); 
                 return;
             }
 
-            updateAimAngle(); // 방향키에 따라 각도 업데이트
+            updateAimAngle(); // 1. 자동 왕복 로직 실행
 
-            // 1. 발사대 버블 그리기
             currentBubble.draw();
             
-            // 2. 발사된 버블 그리기 및 업데이트
             if (firedBubble) {
                 firedBubble.update();
                 firedBubble.draw();
@@ -485,49 +497,43 @@
                 drawAimLine(); // 발사 중이 아닐 때만 화살표 표시
             }
 
-            // 3. 고정된 버블 그리드 그리기
             drawGrid();
-            
+            scoreDisplay.textContent = score;
+
             gameLoop = requestAnimationFrame(draw); 
         }
 
         // ====== 이벤트 리스너 ======
         
-        // 키보드 이벤트 (PC에서 방향 조절용)
+        // PC 키보드 이벤트 (스페이스바로 발사)
         document.addEventListener('keydown', (e) => {
-            if (isGameOver) return;
-            if (e.key === 'ArrowLeft' || e.key === 'a') {
-                aimLeft = true;
-            } else if (e.key === 'ArrowRight' || e.key === 'd') {
-                aimRight = true;
-            } else if (e.key === ' ' || e.key === 'Enter') {
+            if (isGameOver) {
+                if (e.key === ' ') startGame();
+                return;
+            }
+            if (e.key === ' ' || e.key === 'Enter') {
+                shootBubble();
+            }
+        });
+        
+        // 2. 모바일 발사 버튼 이벤트
+        shootButton.addEventListener('click', () => {
+            if (isGameOver) {
+                startGame();
+            } else {
                 shootBubble();
             }
         });
 
-        document.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a') {
-                aimLeft = false;
-            } else if (e.key === 'ArrowRight' || e.key === 'd') {
-                aimRight = false;
-            }
-        });
-
-        // 4. 모바일 터치 이벤트 (화면 중앙 터치 시 발사)
-        canvas.addEventListener('click', (e) => {
+        // 캔버스 터치 이벤트 (게임 오버 시 재시작 목적)
+        canvas.addEventListener('click', () => {
             if (isGameOver) {
                 startGame();
-                return;
-            }
-            // 발사 중이 아닐 때만 발사
-            if (!firedBubble) {
-                 shootBubble();
             }
         });
-
+        
         // 초기 실행:
-        // window.onload 대신 바로 실행
-        window.addEventListener('resize', updateShooterPosition); // 화면 크기 변경 시 거북이 위치 조정
+        window.addEventListener('resize', updateShooterPosition);
         startGame();
     </script>
 </body>
