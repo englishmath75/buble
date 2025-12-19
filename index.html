@@ -3,156 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>자동 조준 버블 슈터</title>
+    <title>영수의 테트리스</title>
     <style>
-        /* 기본 스타일 */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #1f4287, #21e4c7);
+            --panel-bg: #0d2c55;
+            --accent-color: #e91e63;
+            --canvas-border: #4a90e2;
+        }
+
         body {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #1f4287, #21e4c7); 
+            background: var(--bg-gradient); 
             flex-direction: column;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
             touch-action: none; 
-            padding: 10px;
+            overflow: hidden;
         }
 
         #game-wrapper {
-            background-color: #0d2c55; 
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 255, 255, 0.1);
-            padding: 15px;
+            background-color: var(--panel-bg); 
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 100%;
+            width: 90%;
             max-width: 420px; 
         }
 
-        canvas {
-            border: 4px solid #4a90e2; 
-            background-color: #1a4e7e; 
-            cursor: pointer;
-            border-radius: 8px;
-            width: 380px; 
-            height: 570px; 
-            margin-bottom: 15px;
-        }
-        
-        #info {
-            color: #ffffff;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-            width: 100%;
-            text-align: center;
-            background-color: #0b3a6d;
-            padding: 8px 0;
-            border-radius: 5px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        h1 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
+        #info {
+            color: #ffffff;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            width: 100%;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px 0;
+            border-radius: 10px;
+        }
+
+        canvas {
+            border: 5px solid var(--canvas-border); 
+            background-color: #1a4e7e; 
+            cursor: pointer;
+            border-radius: 12px;
+            width: 100%; 
+            max-width: 380px;
+            height: auto;
+            aspect-ratio: 2 / 3;
+        }
+        
         #message {
             color: #ffeb3b;
-            font-size: 1.2em;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px #000;
+            font-size: 0.9em;
+            margin-top: 5px;
+            height: 1.2em;
         }
 
         #shooter {
             position: absolute;
             z-index: 10;
-            color: #38c172; 
             font-size: 3em;
-            text-shadow: 1px 1px 3px #000;
             pointer-events: none;
+            transition: transform 0.1s;
         }
 
-        /* 2. 모바일 발사 버튼 스타일 */
         #mobile-controls {
-            width: 90%;
-            max-width: 380px;
+            width: 100%;
             display: flex;
             justify-content: center;
-            margin-top: 5px;
+            margin-top: 15px;
         }
 
         #shoot-button {
-            padding: 15px 30px;
-            font-size: 1.4em;
+            width: 80%;
+            padding: 15px;
+            font-size: 1.2em;
             font-weight: bold;
             color: white;
-            background-color: #e91e63; /* 강렬한 발사 버튼 색상 */
+            background-color: var(--accent-color);
             border: none;
-            border-radius: 8px;
-            box-shadow: 0 4px #ad1457;
+            border-radius: 50px;
+            box-shadow: 0 5px #ad1457;
             cursor: pointer;
-            user-select: none;
-            transition: all 0.1s;
+            transition: 0.1s;
         }
 
         #shoot-button:active {
             box-shadow: 0 2px #ad1457;
-            transform: translateY(2px);
+            transform: translateY(3px);
         }
     </style>
 </head>
 <body>
     <div id="game-wrapper">
+        <h1>영수의 테트리스</h1>
         <div id="info">
-            점수: <span id="score">0</span> | 남은 행: <span id="remainingRows"></span>
+            점수: <strong><span id="score">0</span></strong> | 남은 행: <strong><span id="remainingRows">0</span></strong>
             <div id="message"></div>
         </div>
         
         <canvas id="gameCanvas" width="400" height="600"></canvas>
-        
         <div id="shooter">🐢</div> 
 
         <div id="mobile-controls">
-            <button id="shoot-button">발사!</button>
+            <button id="shoot-button">버블 발사!!</button>
         </div>
     </div>
 
     <script>
-        // HTML 요소 및 Canvas 컨텍스트
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score');
         const remainingRowsDisplay = document.getElementById('remainingRows');
         const messageDisplay = document.getElementById('message');
         const shooterElement = document.getElementById('shooter');
-        const shootButton = document.getElementById('shoot-button'); // 발사 버튼 DOM
+        const shootButton = document.getElementById('shoot-button');
 
-        // ====== 상수 및 설정 ======
+        // ====== 설정 ======
         const CANVAS_WIDTH = 400; 
         const CANVAS_HEIGHT = 600; 
         const BUBBLE_RADIUS = 20; 
         const BUBBLE_COLORS = ['#ff4c4c', '#4caf50', '#2196f3', '#ffeb3b', '#9c27b0'];
         const SHOOTER_Y = CANVAS_HEIGHT - BUBBLE_RADIUS * 2;
-        const GRID_ROWS = 15; 
+        const GRID_ROWS = 14; 
         const GRID_COLS = 10; 
         const ROW_HEIGHT = Math.sqrt(3) * BUBBLE_RADIUS; 
         
-        // 1. 자동 조준을 위한 변수
-        let aimAngle = Math.PI / 2;     // 현재 각도 (90도)
-        let angleDirection = 1;         // 1: 오른쪽으로, -1: 왼쪽으로
-        const AIM_SPEED = 0.03;         // 자동 왕복 속도
+        let aimAngle = Math.PI / 2;     
+        let angleDirection = 1;         
+        const AIM_SPEED = 0.035;        
+        const MIN_ANGLE = Math.PI / 8;  
+        const MAX_ANGLE = Math.PI * 7 / 8; 
 
-        const MIN_ANGLE = Math.PI / 8;  // 최소 각도 (약 22.5도)
-        const MAX_ANGLE = Math.PI * 7 / 8; // 최대 각도 (약 157.5도)
-
-        // ====== 전역 변수 ======
         let score = 0;
         let isGameOver = false;
         let currentBubble;
         let firedBubble = null;
         let bubbleGrid = [];
         let gameLoop;
-        let isShooting = false; 
 
-        // ====== 클래스 정의: Bubble (이전과 동일) ======
         class Bubble {
             constructor(x, y, color) {
                 this.x = x;
@@ -162,18 +165,23 @@
                 this.vx = 0;
                 this.vy = 0;
                 this.isFired = false;
-                this.isMatched = false;
             }
 
             draw() {
+                ctx.save();
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radius - 1, 0, Math.PI * 2);
+                
+                // 입체감 있는 그라데이션 추가
+                let grad = ctx.createRadialGradient(this.x - 5, this.y - 5, 2, this.x, this.y, this.radius);
+                grad.addColorStop(0, '#fff');
+                grad.addColorStop(0.2, this.color);
+                grad.addColorStop(1, 'black');
+                
+                ctx.fillStyle = grad;
                 ctx.fill();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
                 ctx.closePath();
+                ctx.restore();
             }
 
             update() {
@@ -183,25 +191,6 @@
                 }
             }
         }
-        
-        // ====== 게임 초기화 및 시작 ======
-        
-        function getRandomColor(availableColors) {
-            return availableColors[Math.floor(Math.random() * availableColors.length)];
-        }
-        
-        function getRandomBubble() {
-            let activeColors = new Set();
-            bubbleGrid.forEach(row => {
-                row.forEach(b => {
-                    if (b) activeColors.add(b.color);
-                });
-            });
-            let colorsArray = Array.from(activeColors.size > 0 ? activeColors : BUBBLE_COLORS);
-
-            const randomColor = getRandomColor(colorsArray);
-            return new Bubble(CANVAS_WIDTH / 2, SHOOTER_Y, randomColor);
-        }
 
         function initGrid() {
             bubbleGrid = [];
@@ -209,331 +198,215 @@
                 bubbleGrid[r] = [];
                 const offsetX = (r % 2 === 1) ? BUBBLE_RADIUS : 0; 
                 const colsInRow = GRID_COLS - (r % 2);
-                
                 for (let c = 0; c < colsInRow; c++) {
                     const x = c * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + offsetX;
                     const y = r * ROW_HEIGHT + BUBBLE_RADIUS;
-
-                    if (r < 5) { 
-                        const randomColor = getRandomColor(BUBBLE_COLORS.slice(0, 4)); 
-                        bubbleGrid[r][c] = new Bubble(x, y, randomColor);
-                    } else {
-                        bubbleGrid[r][c] = null;
-                    }
+                    bubbleGrid[r][c] = (r < 5) ? new Bubble(x, y, BUBBLE_COLORS[Math.floor(Math.random() * 4)]) : null;
                 }
             }
         }
 
         function startGame() {
-            cancelAnimationFrame(gameLoop);
             score = 0;
             isGameOver = false;
             firedBubble = null;
-            messageDisplay.textContent = "방향 화살표가 자동으로 움직입니다. 발사 버튼이나 스페이스바를 누르세요!";
-
+            messageDisplay.textContent = "타이밍에 맞춰 발사 버튼을 누르세요!";
             initGrid();
-            currentBubble = getRandomBubble();
+            currentBubble = new Bubble(CANVAS_WIDTH / 2, SHOOTER_Y, BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)]);
             scoreDisplay.textContent = score;
-            
             updateShooterPosition();
-            
-            requestAnimationFrame(draw);
+            if (gameLoop) cancelAnimationFrame(gameLoop);
+            draw();
         }
-        
+
         function updateShooterPosition() {
             const rect = canvas.getBoundingClientRect();
-            shooterElement.style.left = rect.left + CANVAS_WIDTH / 2 - shooterElement.offsetWidth / 2 + 'px';
-            shooterElement.style.top = rect.top + SHOOTER_Y - 40 + 'px';
+            shooterElement.style.left = rect.left + rect.width / 2 - shooterElement.offsetWidth / 2 + 'px';
+            shooterElement.style.top = rect.top + rect.height * (SHOOTER_Y / CANVAS_HEIGHT) - 45 + 'px';
         }
-        
-        // ====== 발사 로직 ======
 
         function shootBubble() {
             if (isGameOver || firedBubble) return;
-
-            const speed = 8;
+            const speed = 12; // 발사 속도 상향
             currentBubble.vx = speed * Math.cos(aimAngle);
             currentBubble.vy = -speed * Math.sin(aimAngle);
-
             currentBubble.isFired = true;
             firedBubble = currentBubble;
-            
-            currentBubble = getRandomBubble(); 
-            isShooting = true;
+            currentBubble = new Bubble(CANVAS_WIDTH / 2, SHOOTER_Y, BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)]);
         }
 
-        // ====== 1. 자동 왕복 조준 로직 ======
-
         function updateAimAngle() {
-            // 각도 변경
+            if (firedBubble) return;
             aimAngle += angleDirection * AIM_SPEED;
-
-            // 경계 조건 확인 및 방향 전환
-            if (aimAngle > MAX_ANGLE) {
-                aimAngle = MAX_ANGLE;
-                angleDirection = -1; // 왼쪽으로 전환
-            } else if (aimAngle < MIN_ANGLE) {
-                aimAngle = MIN_ANGLE;
-                angleDirection = 1; // 오른쪽으로 전환
-            }
+            if (aimAngle > MAX_ANGLE || aimAngle < MIN_ANGLE) angleDirection *= -1;
         }
 
         function drawAimLine() {
             if (firedBubble) return;
-
-            const length = 100; 
-            const targetX = currentBubble.x + length * Math.cos(aimAngle);
-            const targetY = currentBubble.y - length * Math.sin(aimAngle); 
-            
-            // 화살표 스타일
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]); 
-
+            ctx.setLineDash([5, 10]);
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.beginPath();
-            ctx.moveTo(currentBubble.x, currentBubble.y);
-            ctx.lineTo(targetX, targetY);
+            ctx.moveTo(CANVAS_WIDTH / 2, SHOOTER_Y);
+            ctx.lineTo(CANVAS_WIDTH / 2 + 150 * Math.cos(aimAngle), SHOOTER_Y - 150 * Math.sin(aimAngle));
             ctx.stroke();
-            ctx.setLineDash([]); 
+            ctx.setLineDash([]);
         }
-        
-        // ====== 게임 로직 (충돌, 고정, 제거 등은 이전 코드와 동일) ======
-        
-        function checkGridCollision(bubble) {
-            if (bubble.y - BUBBLE_RADIUS <= 0) return true;
+
+        // --- 충돌 및 로직 처리 (최적화) ---
+        function handleCollisions() {
+            if (!firedBubble) return;
+            
+            // 벽 반사
+            if (firedBubble.x - BUBBLE_RADIUS < 0 || firedBubble.x + BUBBLE_RADIUS > CANVAS_WIDTH) {
+                firedBubble.vx *= -1;
+            }
+
+            // 천장 또는 그리드 충돌
+            if (firedBubble.y - BUBBLE_RADIUS <= 0 || checkGridCollision(firedBubble)) {
+                snapToGrid(firedBubble);
+            }
+        }
+
+        function checkGridCollision(b) {
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < bubbleGrid[r].length; c++) {
-                    const target = bubbleGrid[r][c];
-                    if (target) {
-                        const distance = Math.sqrt((bubble.x - target.x) ** 2 + (bubble.y - target.y) ** 2);
-                        if (distance < BUBBLE_RADIUS * 2) return true;
-                    }
+                    let target = bubbleGrid[r][c];
+                    if (target && Math.hypot(b.x - target.x, b.y - target.y) < BUBBLE_RADIUS * 1.8) return true;
                 }
             }
             return false;
         }
 
-        function snapBubbleToGrid(bubble) {
-            const r = Math.round((bubble.y - BUBBLE_RADIUS) / ROW_HEIGHT);
-            const cFloat = (bubble.x - BUBBLE_RADIUS) / (BUBBLE_RADIUS * 2) - (r % 2 === 1 ? 0.5 : 0);
-            let c = Math.round(cFloat);
+        function snapToGrid(b) {
+            let r = Math.round((b.y - BUBBLE_RADIUS) / ROW_HEIGHT);
+            let offsetX = (r % 2 === 1) ? BUBBLE_RADIUS : 0;
+            let c = Math.round((b.x - BUBBLE_RADIUS - offsetX) / (BUBBLE_RADIUS * 2));
+            
+            r = Math.max(0, Math.min(r, GRID_ROWS - 1));
+            const maxCols = GRID_COLS - (r % 2);
+            c = Math.max(0, Math.min(c, maxCols - 1));
 
-            if (r < 0) r = 0;
-            if (r >= GRID_ROWS) r = GRID_ROWS - 1; 
-
-            const colsInRow = GRID_COLS - (r % 2);
-            if (c < 0) c = 0;
-            if (c >= colsInRow) c = colsInRow - 1;
-            
-            const offsetX = (r % 2 === 1) ? BUBBLE_RADIUS : 0;
-            bubble.x = c * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + offsetX;
-            bubble.y = r * ROW_HEIGHT + BUBBLE_RADIUS;
-            
-            if (bubbleGrid[r] && bubbleGrid[r][c] === null) {
-                bubbleGrid[r][c] = bubble;
-            } else {
-                bubbleGrid[r][c] = bubble; 
-            }
-            
+            b.x = c * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + offsetX;
+            b.y = r * ROW_HEIGHT + BUBBLE_RADIUS;
+            bubbleGrid[r][c] = b;
             firedBubble = null;
-            isShooting = false;
-            checkAndClearMatches(r, c);
+            
+            checkMatches(r, c, b.color);
         }
 
-        function findNeighbors(r, c) {
-            const isOddRow = r % 2 !== 0; 
-            const offsets = isOddRow ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]] : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
-            const neighbors = [];
-            offsets.forEach(([dr, dc]) => {
-                const nr = r + dr;
-                const nc = c + dc;
-                if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < bubbleGrid[nr].length) {
-                    if (bubbleGrid[nr][nc]) {
-                        neighbors.push({ r: nr, c: nc, bubble: bubbleGrid[nr][nc] });
-                    }
-                }
-            });
-            return neighbors;
-        }
+        function checkMatches(startR, startC, color) {
+            let matches = [];
+            let queue = [{r: startR, c: startC}];
+            let visited = new Set([`${startR},${startC}`]);
 
-        function getConnectedBubbles(startR, startC, targetColor) {
-            const queue = [{ r: startR, c: startC }];
-            const visited = new Set();
-            const connected = [];
-
-            while (queue.length > 0) {
-                const { r, c } = queue.shift();
-                const key = `${r},${c}`;
-                if (visited.has(key)) continue;
-                visited.add(key);
-                const bubble = bubbleGrid[r][c];
-                if (bubble && bubble.color === targetColor) {
-                    connected.push({ r, c });
-                    findNeighbors(r, c).forEach(neighbor => {
-                        if (!visited.has(`${neighbor.r},${neighbor.c}`) && neighbor.bubble.color === targetColor) {
-                            queue.push({ r: neighbor.r, c: neighbor.c });
+            while(queue.length > 0) {
+                let {r, c} = queue.shift();
+                if (bubbleGrid[r][c] && bubbleGrid[r][c].color === color) {
+                    matches.push({r, c});
+                    getNeighbors(r, c).forEach(n => {
+                        if (!visited.has(`${n.r},${n.c}`)) {
+                            visited.add(`${n.r},${n.c}`);
+                            queue.push(n);
                         }
                     });
                 }
             }
-            return connected;
-        }
 
-        function checkAndClearMatches(r, c) {
-            const startBubble = bubbleGrid[r][c];
-            if (!startBubble) return;
-
-            const connected = getConnectedBubbles(r, c, startBubble.color);
-            
-            if (connected.length >= 3) {
-                connected.forEach(({ r, c }) => { bubbleGrid[r][c] = null; });
-                score += connected.length * 10; 
-                clearFloatingBubbles();
+            if (matches.length >= 3) {
+                matches.forEach(m => bubbleGrid[m.r][m.c] = null);
+                score += matches.length * 10;
+                dropFloatingBubbles();
             }
-            checkGameOver();
+            
+            if (startR >= GRID_ROWS - 2) {
+                isGameOver = true;
+                messageDisplay.textContent = "게임 오버! 다시 시작하려면 클릭하세요.";
+            }
         }
 
-        function clearFloatingBubbles() {
-            const connectedToTop = new Set();
+        function getNeighbors(r, c) {
+            const isOdd = r % 2 !== 0;
+            const directions = isOdd ? 
+                [[0,-1],[0,1],[-1,0],[-1,1],[1,0],[1,1]] : 
+                [[0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]];
+            let res = [];
+            directions.forEach(([dr, dc]) => {
+                let nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < (GRID_COLS - (nr % 2))) {
+                    if (bubbleGrid[nr][nc]) res.push({r: nr, c: nc});
+                }
+            });
+            return res;
+        }
+
+        function dropFloatingBubbles() {
+            // 천장에 붙은 버블 찾기 (BFS)
+            let connected = new Set();
+            let queue = [];
             for (let c = 0; c < bubbleGrid[0].length; c++) {
                 if (bubbleGrid[0][c]) {
-                    const queue = [{ r: 0, c: c }];
-                    const visited = new Set();
-                    while (queue.length > 0) {
-                        const { r, c } = queue.shift();
-                        const key = `${r},${c}`;
-                        if (visited.has(key)) continue;
-                        visited.add(key);
-                        if (r >= 0 && r < GRID_ROWS && c >= 0 && c < bubbleGrid[r].length && bubbleGrid[r][c]) {
-                            connectedToTop.add(key);
-                            findNeighbors(r, c).forEach(neighbor => {
-                                if (!visited.has(`${neighbor.r},${neighbor.c}`)) {
-                                    queue.push({ r: neighbor.r, c: neighbor.c });
-                                }
-                            });
-                        }
-                    }
+                    queue.push({r:0, c:c});
+                    connected.add(`0,${c}`);
                 }
             }
 
-            let floatersRemoved = 0;
+            while(queue.length > 0) {
+                let {r, c} = queue.shift();
+                getNeighbors(r, c).forEach(n => {
+                    if (!connected.has(`${n.r},${n.c}`)) {
+                        connected.add(`${n.r},${n.c}`);
+                        queue.push(n);
+                    }
+                });
+            }
+
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < bubbleGrid[r].length; c++) {
-                    const key = `${r},${c}`;
-                    if (bubbleGrid[r][c] && !connectedToTop.has(key)) {
+                    if (bubbleGrid[r][c] && !connected.has(`${r},${c}`)) {
                         bubbleGrid[r][c] = null;
-                        floatersRemoved++;
+                        score += 20;
                     }
                 }
             }
-            
-            if (floatersRemoved > 0) {
-                score += floatersRemoved * 50; 
-                messageDisplay.textContent = `콤보! ${floatersRemoved}개의 버블이 떨어졌습니다.`;
-            } else {
-                messageDisplay.textContent = "";
-            }
         }
-
-        function checkGameOver() {
-            const maxR = Math.floor(SHOOTER_Y / ROW_HEIGHT);
-            if (bubbleGrid.some((row, r) => r > maxR && row.some(b => b !== null))) {
-                isGameOver = true;
-                messageDisplay.textContent = "게임 오버! 다시 시작하려면 버튼을 누르세요.";
-            } else if (bubbleGrid.every(row => row.every(b => b === null))) {
-                isGameOver = true;
-                messageDisplay.textContent = "★ 승리! 축하합니다! ★";
-            }
-        }
-
-        function handleFiredBubbleCollision() {
-            if (!firedBubble) return;
-
-            if (firedBubble.x - BUBBLE_RADIUS < 0 || firedBubble.x + BUBBLE_RADIUS > CANVAS_WIDTH) {
-                firedBubble.vx *= -1;
-            }
-
-            if (firedBubble.y - BUBBLE_RADIUS <= 0 || checkGridCollision(firedBubble)) {
-                snapBubbleToGrid(firedBubble);
-            }
-        }
-
-        function drawGrid() {
-            let activeRows = 0;
-            for (let r = 0; r < GRID_ROWS; r++) {
-                if (bubbleGrid[r].some(b => b !== null)) {
-                    activeRows++;
-                }
-                for (let c = 0; c < bubbleGrid[r].length; c++) {
-                    const bubble = bubbleGrid[r][c];
-                    if (bubble) {
-                        bubble.draw();
-                    }
-                }
-            }
-            remainingRowsDisplay.textContent = activeRows;
-        }
-
-        // ====== 게임 루프 ======
 
         function draw() {
             ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             
-            if (isGameOver) {
-                // 게임 오버 상태에서는 조준선 움직임 중지
-                gameLoop = requestAnimationFrame(draw); 
-                return;
+            updateAimAngle();
+            drawAimLine();
+            
+            let activeRows = 0;
+            for (let r = 0; r < GRID_ROWS; r++) {
+                let hasBubble = false;
+                for (let c = 0; c < bubbleGrid[r].length; c++) {
+                    if (bubbleGrid[r][c]) {
+                        bubbleGrid[r][c].draw();
+                        hasBubble = true;
+                    }
+                }
+                if (hasBubble) activeRows++;
             }
 
-            updateAimAngle(); // 1. 자동 왕복 로직 실행
-
             currentBubble.draw();
-            
             if (firedBubble) {
                 firedBubble.update();
                 firedBubble.draw();
-                handleFiredBubbleCollision(); 
-            } else {
-                drawAimLine(); // 발사 중이 아닐 때만 화살표 표시
+                handleCollisions();
             }
 
-            drawGrid();
+            remainingRowsDisplay.textContent = activeRows;
             scoreDisplay.textContent = score;
 
-            gameLoop = requestAnimationFrame(draw); 
+            if (!isGameOver) gameLoop = requestAnimationFrame(draw);
         }
 
-        // ====== 이벤트 리스너 ======
-        
-        // PC 키보드 이벤트 (스페이스바로 발사)
-        document.addEventListener('keydown', (e) => {
-            if (isGameOver) {
-                if (e.key === ' ') startGame();
-                return;
-            }
-            if (e.key === ' ' || e.key === 'Enter') {
-                shootBubble();
-            }
-        });
-        
-        // 2. 모바일 발사 버튼 이벤트
-        shootButton.addEventListener('click', () => {
-            if (isGameOver) {
-                startGame();
-            } else {
-                shootBubble();
-            }
-        });
-
-        // 캔버스 터치 이벤트 (게임 오버 시 재시작 목적)
-        canvas.addEventListener('click', () => {
-            if (isGameOver) {
-                startGame();
-            }
-        });
-        
-        // 초기 실행:
+        // 이벤트 리스너
+        shootButton.addEventListener('click', () => isGameOver ? startGame() : shootBubble());
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space') isGameOver ? startGame() : shootBubble(); });
         window.addEventListener('resize', updateShooterPosition);
+        canvas.addEventListener('click', () => { if(isGameOver) startGame(); });
+
         startGame();
     </script>
 </body>
